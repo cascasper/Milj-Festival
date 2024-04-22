@@ -1,0 +1,357 @@
+﻿
+@page "/koordinator"
+@using MiljøFestivalv2.Shared
+@using System.Net.Http.Json
+@using Client.Services
+@inject HttpClient Http
+@inject NavigationManager NavManager
+@inject IJSRuntime jsRuntime;
+
+<head><link rel="stylesheet" href="Koordinator.razor.css" /></head>
+
+<h1>Koordinator</h1>
+
+@if (FrivilligListe.Count == 0)
+{
+    <img src="Images/loading.gif" class="GIF">
+}
+else
+{
+    <!-- Printer alle Frivillige ud-->
+    <h2>Alle Frivillige</h2>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>fulde navn</th>
+                <th>email</th>
+                <th>telefon nummer</th>
+                <th>fødselsdag</th>
+                <th>cpr nummer</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var Frivillige in FrivilligListe)
+                {
+                <tr>
+                    <td>@Frivillige.fulde_navn</td>
+                    <td>@Frivillige.email</td>
+                    <td>@Frivillige.telefon_nummer</td>
+                    <td>@Frivillige.GetFødselsdag()</td>
+                    <td>@Frivillige.cpr_nummer</td>
+
+                    @if (Frivillige.er_aktiv)
+                        {
+                        <td><button class="MainButton" style="width: 70%" @onclick="() => SkiftAktivStatus(Frivillige.bruger_id)">Deaktiver bruger</button> </td>
+                        }
+                        else
+                        {
+                        <td><button class="MainButton" style="width: 70%" @onclick="() => SkiftAktivStatus(Frivillige.bruger_id)">Aktiver bruger</button> </td>
+                        }
+
+                    @if (Frivillige.er_blacklistet)
+                        {
+                        <td><button class="MainButton" style="width: 70%; background-color: grey" @onclick="() => SkiftBlacklistStatus(Frivillige.bruger_id)">Whitelist bruger</button> </td>
+                        }
+                        else
+                        {
+                        <td><button class="MainButton" style="width: 70%" @onclick="() => SkiftBlacklistStatus(Frivillige.bruger_id)">Blacklist bruger</button> </td>
+                        }
+
+                </tr>
+                }
+        </tbody>
+    </table>
+
+    <!-- Printer alle vagter ud-->
+    <h2>Alle Vagter</h2>
+    <div><button class="MainButton" style="width: 10%; margin-bottom: 10px" @onclick="ScrollToBottom">Opret vagt</button></div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Område</th>
+               <th> <button class="MainButton" style="width: 80%" @onclick="SortByAntalPersoner">Antal Personer</button> </th>
+                <th>Beskrivelse</th>
+                <th>Start Tid</th>
+                <th>Slut tid</th>
+                <th>Prioritering</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var Vagt in VagtListe)
+                {
+                <tr>
+                    <td>@Vagt.område</td>
+                    <td>@Vagt.antal_personer</td>
+                    <td>@Vagt.beskrivelse</td>
+                    <td>@Vagt.FjernSekunderStart().ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@Vagt.FjernSekunderSlut().ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@Vagt.priotering</td>
+                    <td>
+                <button class="MainButton" @onclick="() => RedigerVagt(Vagt.vagt_id)">Rediger vagt</button>
+                </td>
+                <td>
+                <button class="btn btn-danger"@onclick="() => DeleteVagt(Vagt.vagt_id)">Fjern Vagt</button>
+                </td
+                </tr>
+                }
+        </tbody>
+    </table>
+
+    <!-- Printer alle bookinger-->
+    <h2>Bookinger</h2>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Område</th>
+                <th>Beskrivelse</th>
+                <th>Frivillige</th>
+                <th>Telefon nummer</th>
+                <th>Start Tid</th>
+                <th>Slut tid</th>
+                <th>Prioritering</th>
+                <th>Vagt id</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var Booking in BookingListe)
+                {
+                <tr>
+                    <td>@Booking.område</td>
+                    <td>@Booking.beskrivelse</td>
+                    <td>@Booking.fulde_navn</td>
+                    <td>@Booking.telefon_nummer</td>
+                    <td>@Booking.FjernSekunderStart().ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@Booking.FjernSekunderSlut().ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@Booking.priotering</td>
+                    <td>@Booking.vagt_id</td>
+                    @if (Booking.er_låst)
+                    {
+                        <td><button class="MainButton" @onclick="() => SkiftLåsStatus(Booking.booking_id)">Åbn booking</button> </td>
+                    }
+                    else
+                    {
+                        <td><button class="MainButton" @onclick="() => SkiftLåsStatus(Booking.booking_id)">Lås booking</button> </td>
+                    }
+                <td>
+                    <button class="btn btn-danger" @onclick="() => SletBooking(Booking.booking_id)">Slet booking</button>
+                </td>
+                </tr>
+                }
+        </tbody>
+    </table>
+
+    //editform til at oprette vagter
+     <h2>Opret vagt</h2>
+  <div style="display:flex; justify-content:start">
+    <EditForm EditContext="@cEditContext" class="row p-3" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="opret">
+            <div style="display: grid; grid-template-columns: min-content 200px; row-gap: 8px; column-gap: 16px; align-items: center" class="container input-grid"> 
+   
+                <label>Område:</label>
+                <InputText id="område" @bind-Value="vagt.område" required />
+
+                <label style="white-space: nowrap">Start dato:</label>
+                <InputDate id="start_tid" @bind-Value="vagt.start_tid" required />
+                <label>Start tidspunkt</label>
+                <InputText type="time" @bind-Value="StartKlokkeslætProxy"/>
+                <label style="white-space: nowrap">Slut dato:</label>
+                <InputDate id="slut_tid" @bind-Value="vagt.slut_tid" required />
+                <label>Slut tidspunkt</label>
+                <InputText type="time" @bind-Value="SlutKlokkeslætProxy"/>
+                
+                <label style="white-space: nowrap">Vagt beskrivelse:</label>
+                <InputText id="beskrivelse" @bind-Value="vagt.beskrivelse" required />
+          
+                <label>Priotet:</label>
+                <InputSelect id="priotering" @bind-Value="vagt.priotering" class="form-control">
+                    <option value="lav" style="color:black">Vælg priotet</option>
+                    <option value="høj" style="color:black">høj</option>
+                    <option value="lav" style="color:black">lav</option>
+                </InputSelect>
+   
+                <label style="white-space: nowrap">Antal Point</label>
+                <InputNumber id="point" @bind-Value="vagt.point" required />
+     
+                <label style="white-space: nowrap">Antal personer:</label>
+                <InputNumber id="antal_personer" @bind-Value="vagt.antal_personer" required />
+ 
+                <button class="MainButton" type="submit">Opret vagt</button>
+            </div>
+        </div>
+      
+    </EditForm>
+   </div>
+   <h2>Opret besked</h2>
+   <div style="display:flex; justify-content:start">
+        <EditForm EditContext="@dEditContext" class="row p-3" OnValidSubmit="@HandleValidSubmitBeskeder">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="opret">
+        <div style="display: grid; grid-template-columns: min-content 200px; row-gap: 8px; column-gap: 16px; align-items: center" class="container input-grid"> 
+            <div>
+                <label>Besked</label>
+                <InputText id="Besked" @bind-Value="Besked.Besked" required />
+            </div>
+            <div>
+                <label>Afsender</label>
+                <InputText id="Afsender" @bind-Value="Besked.Afsender" required />
+            </div>
+            <button class="MainButton" type="submit">Opret Besked</button>
+        </div>
+        </div>
+    </EditForm>
+    </div>
+
+
+}
+
+@code {
+    private EditContext cEditContext;
+    private EditContext dEditContext;
+    Vagt vagt = new Vagt();
+    Msg_board Besked = new Msg_board();
+
+    private TimeSpan StartKlokkeslæt = TimeSpan.FromHours(0);
+    private TimeSpan SlutKlokkeslæt = TimeSpan.FromHours(0);
+
+    private string StartKlokkeslætProxy
+    {
+        get => StartKlokkeslæt.ToString();
+        set => TimeSpan.TryParse(value, out StartKlokkeslæt);
+    }
+
+    private string SlutKlokkeslætProxy
+    {
+        get => SlutKlokkeslæt.ToString();
+        set => TimeSpan.TryParse(value, out SlutKlokkeslæt);
+    }
+
+
+    // Laver en liste med datamodel klasserne fra shared
+    public List<Bruger> FrivilligListe = new List<Bruger>();
+    public List<Vagt> VagtListe = new List<Vagt>();
+    public List<Booking> BookingListe = new List<Booking>();
+    public List<Msg_board> BeskedListe = new List<Msg_board>();
+
+
+    // Injecter Interfaces fra services så deres tilknyttede metoder kan bruges
+    [Inject]
+    public IVagtService ServiceVagt { get; set; }
+    [Inject]
+    public IBrugerService ServiceBruger { get; set; }
+    [Inject]
+    public IBookingService ServiceBooking { get; set; }
+    [Inject]
+    public IMessageService ServiceMessage { get; set; }
+
+    // Når siden åbnes hentes frivillige, bookinger og vagter
+    // og der bliver oprettet to editcontext med vagt og Besked
+    protected override async Task OnInitializedAsync()
+    {
+
+        cEditContext = new EditContext(vagt);
+        dEditContext = new EditContext(Besked);
+
+        FrivilligListe = (await ServiceBruger.HentAlleFrivillige()).ToList();
+        VagtListe = (await ServiceVagt.HentAlleVagter()).ToList();
+        BookingListe = (await ServiceBooking.HentAlleBookinger()).ToList();
+    }
+
+    private async Task DeleteVagt(int vagt_id)
+    {
+        await ServiceVagt.DeleteVagt(vagt_id);
+        VagtListe = (await ServiceVagt.HentAlleVagter()).ToList();
+        StateHasChanged();
+    }
+
+    private async Task SkiftAktivStatus(int bruger_id)
+    {
+        await ServiceBruger.SkiftAktivStatus(bruger_id);
+        FrivilligListe = (await ServiceBruger.HentAlleFrivillige()).ToList();
+        StateHasChanged();
+    }
+
+    private async Task SkiftBlacklistStatus(int bruger_id)
+    {
+        await ServiceBruger.SkiftBlacklistStatus(bruger_id);
+        FrivilligListe = (await ServiceBruger.HentAlleFrivillige()).ToList();
+        StateHasChanged();
+    }
+
+    private async Task SkiftLåsStatus(int BookingId)
+    {
+        await ServiceBooking.SkiftLåsStatus(BookingId);
+        BookingListe = (await ServiceBooking.HentAlleBookinger()).ToList();
+        StateHasChanged();
+    }
+
+   private async Task HandleValidSubmit()
+{
+    vagt.start_tid += StartKlokkeslæt;
+    vagt.slut_tid += SlutKlokkeslæt;
+    await ServiceVagt.TilføjVagt(vagt);
+    StateHasChanged();
+    
+    // Reloader siden når der er oprettet en vagt
+    NavManager.NavigateTo("/temp");
+    NavManager.NavigateTo("/koordinator");
+}
+
+
+    private async Task HandleValidSubmitBeskeder()
+    {
+        // sender det nuværende Tidspunkt og dato når man trykker sumbit knappen til Beskeder
+        Besked.Tidspunkt = DateTime.Now;
+        await ServiceMessage.TilføjBesked(Besked);
+
+        // Reloader siden når der er oprettet en besked
+        NavManager.NavigateTo("/temp");
+        NavManager.NavigateTo("/koordinator");
+    }
+
+    private async Task SletBooking(int BookingId)
+    {
+        await ServiceBooking.SletBooking(BookingId);
+        BookingListe = (await ServiceBooking.HentAlleBookinger()).ToList();
+        VagtListe = (await ServiceVagt.HentAlleVagter()).ToList();
+        StateHasChanged();
+    }
+
+    private void RedigerVagt(int vagt_id)
+    {
+        NavManager.NavigateTo($"/opdatervagt/{vagt_id}");
+    }
+
+    // Filtrer vagterne efter antal_personer når man trykker på kolonnen i tabellen
+    private bool sortAsc = true;
+    private void SortByAntalPersoner()
+    {
+        if (sortAsc)
+        {
+            VagtListe = VagtListe.OrderBy(v => v.antal_personer).ToList();
+        }
+        else
+        {
+            VagtListe = VagtListe.OrderByDescending(v => v.antal_personer).ToList();
+        }
+        sortAsc = !sortAsc;
+    }
+
+    private async Task ScrollToBottom()
+    {
+        await jsRuntime.InvokeVoidAsync("scrollToBottom");
+    }
+
+    }
+
+

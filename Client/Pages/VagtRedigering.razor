@@ -1,0 +1,111 @@
+﻿
+@page "/opdatervagt/{vagt_id:int}"
+@using MiljøFestivalv2.Shared
+@using System.Net.Http.Json
+@using Client.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager Navigation
+@inject HttpClient Http
+
+
+<h1>Opdater Vagt</h1>
+
+@if (vagt != null)
+{
+		<div style="display: flex; justify-content: start">
+			<EditForm Model="vagt" OnValidSubmit="OpdaterVagt">
+				<DataAnnotationsValidator />
+				<ValidationSummary />
+				<div style="display: grid; grid-template-columns: min-content 200px; row-gap: 8px; column-gap: 16px; align-items: center" class="container input-grid">
+				
+					<label for="område" style="white-space: nowrap">Område:</label>
+					<InputText id="område" @bind-Value="vagt.område" class="form-control" />
+					<label for="start_tid"> Start dato</label>
+					<InputDate id="start_tid" @bind-Value="vagt.start_tid" required />
+					<label>Start tidspunkt</label>
+					<InputText type="time" @bind-Value="StartKlokkeslætProxy" />
+					<label style="white-space: nowrap">Slut dato:</label>
+					<InputDate id="slut_tid" @bind-Value="vagt.slut_tid" required />
+					<label>Slut tidspunkt</label>
+					<InputText type="time" @bind-Value="SlutKlokkeslætProxy" />
+					<label for="beskrivelse">Beskrivelse:</label>
+					<InputText id="beskrivelse" @bind-Value="vagt.beskrivelse" class="form-control" />
+					<label style="white-space: nowrap" >Vagt prioritering:</label>
+					<InputSelect id="priotering" @bind-Value="vagt.priotering" class="form-control">
+					   <option value="lav" style="color:black">Vælg priotet</option>
+					   <option value="høj">høj</option>
+					   <option value="lav">lav</option>
+					</InputSelect>
+				
+					<label>Antal point</label>
+					<InputNumber id="point" @bind-Value="vagt.point" required />
+				
+				
+					<label style="white-space: nowrap" for="antal_personer">Antal personer:</label>
+					<InputNumber id="antal_personer" @bind-Value="vagt.antal_personer" class="form-control" />
+					</div>
+					<div>
+					<button type="submit" style="width: 200px">Opdater</button>
+					<button style="width: 200px" @onclick="RedirectKoordinator">Gå tilbage</button>
+				</div>
+				
+			</EditForm>
+		</div>
+}
+else
+{
+		<p>Loading...</p>
+}
+
+
+
+@code {
+// Parameter som indeholder id'et for den vagt, der skal opdateres.
+[Parameter] 
+public int vagt_id { get; set; } 
+
+// To variable til start/slutklokkeslæt
+// Input feltet læser stedfortræderen som string og parser til timespan
+// og sætter startklokkeslæt
+private TimeSpan StartKlokkeslæt = TimeSpan.FromHours(0);
+private TimeSpan SlutKlokkeslæt = TimeSpan.FromHours(0);
+
+private string StartKlokkeslætProxy
+{
+	get => StartKlokkeslæt.ToString();
+	set => TimeSpan.TryParse(value, out StartKlokkeslæt);
+}
+
+private string SlutKlokkeslætProxy
+{
+	get => SlutKlokkeslæt.ToString();
+	set => TimeSpan.TryParse(value, out SlutKlokkeslæt);
+}
+
+// Injecter VagtService interfacet så metoderne derfra kan bruges.
+[Inject]
+public IVagtService VagtService { get; set; } 
+
+// En lokal instans af en 'Vagt', der repræsenterer den vagt der skal opdateres.
+private Vagt vagt;
+
+// Denne metode bliver kaldt når komponenten initialiseres. Den henter den relevante vagt baseret på id'et.
+protected override async Task OnInitializedAsync()
+{
+    vagt = await VagtService.HentVagtSingle(vagt_id);
+}
+
+private async Task OpdaterVagt()
+{
+	vagt.start_tid = new DateTime(vagt.start_tid.Year, vagt.start_tid.Month, vagt.start_tid.Day, StartKlokkeslæt.Hours, StartKlokkeslæt.Minutes, StartKlokkeslæt.Seconds);
+	vagt.slut_tid = new DateTime(vagt.slut_tid.Year, vagt.slut_tid.Month, vagt.slut_tid.Day, SlutKlokkeslæt.Hours, SlutKlokkeslæt.Minutes, SlutKlokkeslæt.Seconds);
+    await VagtService.OpdaterVagt(vagt);
+    Navigation.NavigateTo($"/opdatervagt/{vagt.vagt_id}", forceLoad: true);
+}
+
+private void RedirectKoordinator()
+{
+    Navigation.NavigateTo("/koordinator");
+}
+
+}

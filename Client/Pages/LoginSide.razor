@@ -1,0 +1,83 @@
+@page "/"
+@using MiljøFestivalv2.Shared
+@using System.Net.Http.Json
+@using Client.Services
+
+@inject NavigationManager NavManager
+@inject HttpClient Http
+
+<h1>Miljøfestivalen</h1>
+@if (IsLoading)
+{
+	<img src="Images/loading.gif" class="GIF">
+}
+else
+{
+	<div style="display: flex; justify-content: center" class="container">
+		<EditForm EditContext="@aEditContext" class="row p-3" OnValidSubmit="@HandleValidSubmit">
+			<DataAnnotationsValidator />
+			<ValidationSummary />
+			<div style="display: grid; grid-template-columns: 100px 150px; row-gap: 8px; column-gap: 16px; align-items: center; margin-top: 30px" class="input-grid">
+				<label>Brugernavn:</label>
+				<InputText id="Brugernavn" @bind-Value="Brugerinfo.Brugernavn" />
+				<label>Password:</label>
+				<InputText id="Password" @bind-Value="Brugerinfo.Password" />
+				<button type="submit">Login</button>
+				<div>
+					<button @onclick="Register">Register</button>
+				</div>
+				<h3 style="visibility:@UsynligTilSynlig">Login informationer var forkerte</h3>
+			</div>
+		</EditForm>
+	</div>
+}
+
+@code {
+	public bool IsLoading { get; set; } = false;
+	public string UsynligTilSynlig = "hidden";
+
+	Login Brugerinfo = new();
+	private EditContext aEditContext;
+
+	[Inject]
+	public IBrugerService LoginService { get; set; }
+
+	[Inject]
+	public GlobalState GlobalState { get; set; }
+
+	protected override void OnInitialized()
+	{
+		aEditContext = new EditContext(Brugerinfo);
+	}
+
+	private async Task HandleValidSubmit()
+	{
+		IsLoading = true;
+		var LoggedInBruger = await LoginService.Login(Brugerinfo);
+		IsLoading = false;
+
+		if (LoggedInBruger.rolle == "koordinator" || LoggedInBruger.rolle == "frivillig")
+		{
+			GlobalState.bruger = LoggedInBruger;
+
+			if (LoggedInBruger.rolle == "koordinator")
+			{
+				NavManager.NavigateTo("/koordinator");
+			}
+			else if (LoggedInBruger.rolle == "frivillig")
+			{
+				NavManager.NavigateTo("/frivillig");
+			}
+		}
+		else if (LoggedInBruger.brugernavn == "FEJL")
+		{
+			UsynligTilSynlig = "visible";
+			Console.WriteLine("Login fejlede");
+		}
+	}
+
+	private void Register()
+	{
+		NavManager.NavigateTo("/register");
+	}
+}
