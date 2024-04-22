@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "dgSpecHash": "3YhU+yiz0mAgmsmHveawt2nT1QWEjNy/pnvxT4qOyqtHoqw7YX60Fda/nmV+4LxN1DRXtnxfNqLO792ba1WJ8A==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\caspe\\source\\repos\\Milj-Festivalv2\\Server\\Server.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\caspe\\.nuget\\packages\\dapper\\2.0.123\\dapper.2.0.123.nupkg.sha512",
+    "C:\\Users\\caspe\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\6.0.0\\microsoft.extensions.logging.abstractions.6.0.0.nupkg.sha512",
+    "C:\\Users\\caspe\\.nuget\\packages\\npgsql\\7.0.4\\npgsql.7.0.4.nupkg.sha512",
+    "C:\\Users\\caspe\\.nuget\\packages\\microsoft.netcore.app.ref\\7.0.18\\microsoft.netcore.app.ref.7.0.18.nupkg.sha512",
+    "C:\\Users\\caspe\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\7.0.18\\microsoft.windowsdesktop.app.ref.7.0.18.nupkg.sha512",
+    "C:\\Users\\caspe\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\7.0.18\\microsoft.aspnetcore.app.ref.7.0.18.nupkg.sha512",
+    "C:\\Users\\caspe\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\7.0.18\\microsoft.netcore.app.host.win-x64.7.0.18.nupkg.sha512"
+  ],
+  "logs": []
+}
